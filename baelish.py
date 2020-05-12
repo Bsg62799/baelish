@@ -8,6 +8,84 @@ from PyInquirer import Validator, ValidationError
 from PyInquirer import prompt, style_from_dict, Token
 import os
 import subprocess
+import json
+
+# Informal interface for commands
+class CommandInterface:
+
+    """Return information regarding the command"""
+    def help(self) -> str:
+        pass
+
+    """Execute some sort of functionality based on the current global project"""
+    def execute(self, args):
+        pass
+
+# Class to print help messages for given commands
+class Help(CommandInterface):
+
+    def help(self):
+        return '\nthe input \'help\' will print a list of all available commands\nhelp can also be used alongside another command: \'help command\''
+
+    def execute(self, args):
+
+        # If given no args print all available commands
+        if not args:
+
+            # print help message
+            print(self.help())
+
+            print('\n   Available commands:\n   ----------------------')
+            for command in commands.keys():
+                print('  - ' + command)
+
+            print('\n')
+
+        # If given a command argument, print information about the command
+        elif len(args) == 1:
+
+            # Check that the command exists
+            if args[0] in commands.keys():
+
+                # Print command help info
+                print(commands[args[0]].help())
+
+            else:
+
+                print('Given command not found!')
+
+        # Error if given too many arguments
+        else:
+
+            print('Given too many arguments! Use help alongside a single other command')
+
+# Command to input a bash command while still running baelish
+class Bash(CommandInterface):
+
+    def help(self):
+        return "the command bash can be used to execute bash commands (i.e. \'bash clear\')"
+
+    def execute(self, args):
+
+        if not args:
+            print('Bash does nothing without commands that follow!')
+
+        else:
+
+            bash_command = ""
+
+            for arg in args:
+                bash_command = bash_command + ' ' + arg + ' '
+
+            os.system(bash_command)
+
+
+# Dictionary of available commands
+commands = {
+    #'scan': scan,
+    'help': Help(),
+    'bash': Bash()
+}
 
 # Project class, which holds all necessary fields for the current project
 class Project:
@@ -18,12 +96,7 @@ class Project:
         self.ports = []
         self.loot = []
 
-# Dictionary of available functions
-""" commands = {
-    'scan': scan,
 
-
-} """
 
 
 
@@ -40,7 +113,7 @@ class HostValidator(Validator):
 
 # Check that the given project directory does not exist and can be created
 class NewDirValidator(Validator):
-    def validate(self, document):
+    def validate(self, document):# Dictionary of available commands
 
         # Set effective path
         effective_path = os.getcwd() + "/" + document.text
@@ -83,14 +156,11 @@ class OldDirValidator(Validator):
 
         else:
 
-            if os.path.isdir(effective_path + "/exploit") and os.path.isdir(effective_path + "/loot") and os.path.isdir(effective_path + "/notes") and os.path.isdir(effective_path + "/enumeration"):
-                global project
-                project = effective_path
-
-            else:
+            if not (os.path.isdir(effective_path + "/exploit") and os.path.isdir(effective_path + "/loot") and os.path.isdir(effective_path + "/notes") and os.path.isdir(effective_path + "/enumeration") and os.path.isfile(effective_path + "/info.txt")):
                 raise ValidationError(
                 message='Missing subdirectories at given path, not a baelish project. Try again',
                 cursor_position=len(document.text))
+
 
 
 
@@ -108,7 +178,7 @@ questions = [
 
     {
         'type': 'input',
-        'name': 'newDir',
+        'name': 'Dir',
         'message': 'Relative path for new project?',
         'validate': NewDirValidator,
         'when': lambda info: info['new'] == True
@@ -116,7 +186,7 @@ questions = [
 
     {
         'type': 'input',
-        'name': 'oldDir',
+        'name': 'Dir',
         'message': 'Relative path for exisiting project?',
         'validate': OldDirValidator,
         'when': lambda info: info['new'] == False
@@ -127,13 +197,15 @@ questions = [
         'type': 'input',
         'name': 'target',
         'message': 'Target IP address?',
-        'validate': HostValidator
+        'validate': HostValidator,
+        'when': lambda info: info['new'] == True
     },
 
     {
         'type': 'input',
         'name': 'desc',
-        'message': 'Description of this project?'
+        'message': 'Description of this project?',
+        'when': lambda info: info['new'] == True
     }
 ]
 
@@ -163,9 +235,33 @@ def main():
     print(clint.textui.colored.yellow('------------------------------------\n'))
 
     # Get project information
-    info = prompt(questions, question_styles)
+    info = prompt(questions)
 
-    # Create
+    # Write current fields to file if new project
+    if info['new']:
+        with open(info['Dir'] + "/info.txt", "w") as f:
+            f.write(json.dumps(info))
+
+    # Otherwise load fields from existing info.txt
+    else:
+        with open(info['Dir'] + "/info.txt") as file:
+            fields = json.load(file)
+            info['target'] = fields['target']
+            info['desc'] = fields['desc']
+
+    # Construct project object
+    current_project = Project(info['target'], info['Dir'], info['desc'])
+
+    while True:
+
+        # Await instruction
+        command = input(clint.textui.colored.yellow("> "))
+        args = command.split()
+        command = args.pop(0)
+
+        if command in commands.keys():
+            commands[command].execute(args)
+
 
 if __name__ == '__main__':
     main()
