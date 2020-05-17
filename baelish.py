@@ -10,6 +10,18 @@ import os
 import subprocess
 import json
 
+# Project class, which holds all necessary fields for the current project
+class Project:
+    def __init__(self, target, directory, description):
+        self.target = target
+        self.dir = directory
+        self.desc = description
+        self.ports = []
+        self.loot = []
+
+global current_project
+
+
 # Informal interface for commands
 class CommandInterface:
 
@@ -21,11 +33,45 @@ class CommandInterface:
     def execute(self, args):
         pass
 
+class Enumerate(CommandInterface):
+
+    def help(self):
+        return '\nscans the set target for open ports and services\nUsage: enumerate [lite full]\n  Lite: scans the top 20 most popular ports\n    Full: scans all tcp ports and performs OS detection'
+
+    def execute(self, args):
+
+        if not len(args) == 1:
+
+            print(self.help())
+
+        elif args[0] == "lite":
+
+            os.system('nmap -F ' + current_project.target + ' -o ' + current_project.dir + '/enumeration/nmap_lite.txt')
+
+        elif args[0] == "full":
+
+            os.system('nmap -p- -O ' + current_project.target + ' -o ' + current_project.dir + '/enumeration/nmap_full.txt')
+
+        else:
+
+            print(self.help())
+
+
+# Class to exit baelish
+class Exit(CommandInterface):
+
+    def help(self):
+        return '\nexits baelish and writes the current project to a json'
+
+    def execute(self, args):
+        pass
+
+
 # Class to print help messages for given commands
 class Help(CommandInterface):
 
     def help(self):
-        return '\nthe input \'help\' will print a list of all available commands\nhelp can also be used alongside another command: \'help command\''
+        return '\nprints a list of all available commands\n can also be used alongside another command: (i.e.\'help command\')'
 
     def execute(self, args):
 
@@ -84,20 +130,10 @@ class Bash(CommandInterface):
 commands = {
     #'scan': scan,
     'help': Help(),
-    'bash': Bash()
+    'bash': Bash(),
+    'enumerate': Enumerate(),
+    'exit': Exit()
 }
-
-# Project class, which holds all necessary fields for the current project
-class Project:
-    def __init__(self, target, directory, description):
-        self.target = target
-        self.dir = directory
-        self.desc = description
-        self.ports = []
-        self.loot = []
-
-
-
 
 
 # Check that the given host is legitimate and reachable
@@ -250,6 +286,7 @@ def main():
             info['desc'] = fields['desc']
 
     # Construct project object
+    global current_project
     current_project = Project(info['target'], info['Dir'], info['desc'])
 
     while True:
@@ -259,9 +296,17 @@ def main():
         args = command.split()
         command = args.pop(0)
 
+        # Check if command exists
         if command in commands.keys():
             commands[command].execute(args)
 
+        # Check for exit
+        if command == 'exit':
+            break
+
+    # Write current project to it's info file
+    with open(info['Dir'] + "/info.txt", "w") as f:
+        f.write(json.dumps(current_project.__dict__))
 
 if __name__ == '__main__':
     main()
