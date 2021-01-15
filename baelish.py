@@ -9,6 +9,7 @@ from PyInquirer import prompt, style_from_dict, Token
 import os
 import subprocess
 import json
+import nmap3
 
 # Project class, which holds all necessary fields for the current project
 class Project:
