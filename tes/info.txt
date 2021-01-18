@@ -1,1 +1,0 @@
-{"target": "8.8.8.8", "dir": "./tes", "desc": "Test project to make sure this thing still works", "ports": [], "loot": []}

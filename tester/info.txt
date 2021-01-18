@@ -1,1 +1,0 @@
-{"new": true, "Dir": "tester", "target": "8.8.8.8", "desc": "test"}
