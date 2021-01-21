@@ -23,12 +23,15 @@ class BaelishPrompt(Cmd):
     def preloop(self):
 
         # Set the path for the project
-        global project_path
-        response = input("\n----------------------------------\n" + pyfiglet.figlet_format("NoteMap", font="slant") + \
-        "----------------------------------\n\n" \
+        global project_path, current_host, stored_hosts
+        response = input(cs("\n------------------------------------------\n" + pyfiglet.figlet_format("NoteMap", font="slant") + \
+        "------------------------------------------\n\n" \
         "Welcome to notemap, a tool to aid in handling information for penetration tests" \
-        "\nType ? to list available commands\n" \
-        "\nTo get started, enter a new or exisiting project path: ")
+        "\nType ? to list available commands" \
+        "\nTo get started, enter a new or exisiting project path: ", "cyan"))
+
+        # print for spacing
+        print('')
 
         # verify that the path exists, or make a new directory
         if not path.isdir(response):
@@ -37,14 +40,20 @@ class BaelishPrompt(Cmd):
         # If the path does exist, load in existing data
         else:
 
+            # Iterate through every dir (host) in the project folder
             for dir in os.listdir(response):
+
+                # If available, load host from a all scan
                 if 'nmap-all.xml' in os.listdir(response + '/' + dir):
-                    info = NmapParser.parse_fromfile(response + '/' + dir + 'nmap-all.xml')
-                    stored_hosts[dir] = info.hosts[0]
-                elif 'nmap.xml' in os.listdir(response + '/' + dir):
-                    info = NmapParser.parse_fromfile(response + '/' + dir + 'nmap.xml')
+                    info = NmapParser.parse_fromfile(response + '/' + dir + '/' + 'nmap-all.xml')
                     stored_hosts[dir] = info.hosts[0]
 
+                # Otherwise, load host from a default scan
+                elif 'nmap.xml' in os.listdir(response + '/' + dir):
+                    info = NmapParser.parse_fromfile(response + '/' + dir + '/' + 'nmap.xml')
+                    stored_hosts[dir] = info.hosts[0]
+
+        # store the project path to provide output paths later
         project_path = response
 
         # Derive the name for the project from the path
@@ -55,8 +64,12 @@ class BaelishPrompt(Cmd):
         else:
             project_name = project_path
 
-        # update the visual prompt to show project name
-        self.prompt = cs(project_name + "> ", "cyan")
+        # update the visual prompt to show project name including the host if only one was found
+        if len(stored_hosts.keys()) == 1:
+            current_host = list(stored_hosts.keys())[0]
+            self.prompt = cs(project_name + '/' + current_host + "> ", "cyan")
+        else:
+            self.prompt = cs(project_name + ">", "cyan")
 
 
 ### Commands offered in our cmd loop
@@ -157,6 +170,16 @@ class BaelishPrompt(Cmd):
         scan = NmapParser.parse_fromfile(path)
 
         print(scan.hosts[0].os_fingerprint)
+
+    def do_show(self, inp):
+
+        # init globals
+        global current_host, stored_hosts
+
+        # Test to just print out current ports
+        if current_host:
+            print(stored_hosts[current_host].get_ports())
+
 
 
 
