@@ -7,6 +7,7 @@ import importlib
 from os import path
 import os
 from libnmap.parser import NmapParser
+from libnmap.diff import NmapDiff
 import libnmap
 import commands
 
@@ -15,6 +16,35 @@ stored_hosts = dict()
 current_host = ""
 project_path = ""
 project_name = ""
+
+# Supporting helper methods
+
+# Levies the lipnmap method diff() to compare an existing host object against a new host
+# object derived from an nmap scan. This is critical to ensure that, for example, a host that
+# was derived from an intense nmap scan the performed service detection against every port is
+# not replaced by a host object that simply contains the open ports (default scan result)
+def new_info(cur_host, host):
+
+    # init global
+    global stored_hosts
+
+    # Check to see if there is any change between the two hosts
+    if cur_host.changed(host) > 0:
+
+        # iterate through ports to see if service detection has been done
+        for port in cur_host.get_open_ports():
+            if cur_host.get_service(port[0]).banner:
+                print('\nDisregarding scan. More detailed scan already performed.\n')
+                return
+        # if service detection hasn't been performed, store the results of this new scan
+        # and notify the user of what's been updated
+        print("\nUpdated information:")
+        for service in NmapDiff(cur_host, host).changed():
+            print('- Port ' + str(host.get_service(int(service.split('.')[1])).port) + ': ' + host.get_service(int(service.split('.')[1])).banner)
+        print('\n')
+        stored_hosts[cur_host.ipv4] = host
+
+
 
 # Interactive Shell
 class BaelishPrompt(Cmd):
@@ -30,7 +60,7 @@ class BaelishPrompt(Cmd):
         "\nType ? to list available commands" \
         "\nTo get started, enter a new or exisiting project path: ", "cyan"))
 
-        # print for spacing
+        # spacing
         print('')
 
         # verify that the path exists, or make a new directory
@@ -43,7 +73,7 @@ class BaelishPrompt(Cmd):
             # Iterate through every dir (host) in the project folder
             for dir in os.listdir(response):
 
-                # If available, load host from a all scan
+                # If available, load host from an all scan
                 if 'nmap-all.xml' in os.listdir(response + '/' + dir):
                     info = NmapParser.parse_fromfile(response + '/' + dir + '/' + 'nmap-all.xml')
                     stored_hosts[dir] = info.hosts[0]
@@ -52,6 +82,11 @@ class BaelishPrompt(Cmd):
                 elif 'nmap.xml' in os.listdir(response + '/' + dir):
                     info = NmapParser.parse_fromfile(response + '/' + dir + '/' + 'nmap.xml')
                     stored_hosts[dir] = info.hosts[0]
+
+                # Otherwise initailize an empty dict entry
+                else:
+                    stored_hosts[dir] = dict()
+
 
         # store the project path to provide output paths later
         project_path = response
@@ -65,23 +100,25 @@ class BaelishPrompt(Cmd):
             project_name = project_path
 
         # update the visual prompt to show project name including the host if only one was found
-        if len(stored_hosts.keys()) == 1:
-            current_host = list(stored_hosts.keys())[0]
+        if len(os.listdir(response)) == 1:
+            current_host = os.listdir(response)[0]
             self.prompt = cs(project_name + '/' + current_host + "> ", "cyan")
         else:
             self.prompt = cs(project_name + ">", "cyan")
 
-
-### Commands offered in our cmd loop
-
+    # Currently just breaks the commandloop and ends the program
     def do_exit(self, inp):
         return True
 
     def help_exit(self):
         print('\nUsage: \'exit\'\n- Exits baelish and saves project files to a directory\n')
 
+    # Allows a user to add a host or set of hosts to a project
+    # This runs a ping scan against the host to ensure it is up before adding
+    # it to stored_hosts
     def do_host(self, inp):
 
+        # init globals
         global stored_hosts
 
         # split up provided hostnames or addresses
@@ -107,20 +144,26 @@ class BaelishPrompt(Cmd):
                     global current_host
                     current_host = host
                     self.prompt = cs(project_name + "/" + current_host + "> ", "cyan")
+
+            # Otherwise notify the user
             else:
                 print("\nHost " + host + " already stored as a host!\n" )
 
+        # For every host not present in up_hosts, display that they're down to the user
         for host in hosts:
             if host not in up_hosts:
                 print("\nHost " + host + " is down!\n")
+
+    def help_host(self):
+        print('\nUsage: \'host <ip address> [additional ip addresses]\'' \
+        '\n- Runs a ping scan against the provided host(s)' \
+        '\n- Prints out whether all host(s) that responded to the ping scan and adds them to the project\n')
 
     # performs some type of nmap scan against a host or hosts
     def do_scan(self, input):
 
         # init globals
-        global project_path
-        global current_host
-        global stored_hosts
+        global project_path, current_host, stored_hosts
 
         # run a default nmap scan if given no parameters and a current host is set
         if not input:
@@ -128,10 +171,16 @@ class BaelishPrompt(Cmd):
             # make sure a current host is set
             if not current_host:
                 print("\nNo current host set! Set a host with \'switch <ip addr>\'\n")
+
             else:
                 host = commands.default_scan(current_host, project_path + "/" + current_host + "/nmap")
 
-                # check to see if the existing host already has a scan associated with it
+                # check if we've already scanned this host
+                if stored_hosts[current_host]:
+                    new_info(stored_hosts[current_host], host)
+                else:
+                    stored_hosts[current_host] = host
+
         else:
 
             inps = input.split(" ")
@@ -148,7 +197,14 @@ class BaelishPrompt(Cmd):
 
             if inps[len(inps) - 1] == "all":
                 for host in hosts_to_scan:
-                    commands.all_scan(host, project_path + "/" + host + "/nmap-all")
+                    host_info = commands.all_scan(host, project_path + "/" + host + "/nmap-all")
+
+                    if stored_hosts[host]:
+                        new_info(stored_hosts[host], host_info)
+                    else:
+                        stored_hosts[host] = host_info
+
+                    #
 
 
     def help_scan(self):
@@ -160,10 +216,7 @@ class BaelishPrompt(Cmd):
         print('\n- udp: scans the top 20 udp ports')
 
 
-    def help_host(self):
-        print('\nUsage: \'host <ip address> [additional ip addresses]\'' \
-        '\n- Runs a ping scan against the provided host(s)' \
-        '\n- Prints out whether host(s) is up and stores host that are up locally\n')
+
 
     def do_load(self, path):
 
@@ -181,7 +234,8 @@ class BaelishPrompt(Cmd):
             print(stored_hosts[current_host].get_ports())
 
 
-
+    #def do_diff(self, inp):
+        # Test to try out nmap.diff:
 
 
 

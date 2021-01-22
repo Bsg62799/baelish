@@ -1,10 +1,8 @@
 # List of features for baelish (in order):
 
-- Make sure default and all scan work (going to need to figure out sudo run)
 - Figure out how to run processes and the background but still show they're progress (maybe default cmd just prints status of current processes with some project/host info?)
 - Setup a progress bar / percentage display for processes (sysout/flush?)
 - Switch command for handling multiple hosts
-- Automatic saving of host objects (XML?)
 - Ability to load projects (load hosts from xml with notes and tagging)
 - Means for user to view ports/services and os found on the current host
 - Means for the user to leave notes associated with ports and os

@@ -33,11 +33,11 @@ def default_scan(host,path):
     proc = NmapProcess(host, options='-Pn -oN ' + path + '.txt -oX ' + path + '.xml', safe_mode=False)
     proc.run()
     report = NmapParser.parse_fromfile(path + '.xml')
-    return report.hosts[0].get_dict()
+    return report.hosts[0]
 
 def all_scan(host, path):
 
     proc = NmapProcess(host, options='-A --version-all -p- -oN ' + path + '.txt -oX ' + path + '.xml', safe_mode=False)
     proc.sudo_run()
     report = NmapParser.parse_fromfile(path + '.xml')
-    return report.hosts[0].get_dict()
+    return report.hosts[0]
