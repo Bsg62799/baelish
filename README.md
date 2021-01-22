@@ -1,2 +1,2 @@
-# baelish
-cli tool for taking notes and storing information while conducting penetration tests
+# notemap
+Interactive shell for managing information when conducting penetration tests against a host or set of hosts
