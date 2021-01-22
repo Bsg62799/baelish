@@ -1,0 +1,12 @@
+# Nmap 7.91 scan initiated Fri Jan 22 17:49:57 2021 as: /usr/bin/nmap -oX - -vvv --stats-every 1s -Pn -oN Curling/10.10.10.150/nmap.txt -oX Curling/10.10.10.150/nmap.xml 10.10.10.150
+Nmap scan report for 10.10.10.150
+Host is up, received user-set (0.036s latency).
+Scanned at 2021-01-22 17:49:57 EST for 0s
+Not shown: 998 closed ports
+Reason: 998 conn-refused
+PORT   STATE SERVICE REASON
+22/tcp open  ssh     syn-ack
+80/tcp open  http    syn-ack
+
+Read data files from: /usr/bin/../share/nmap
+# Nmap done at Fri Jan 22 17:49:57 2021 -- 1 IP address (1 host up) scanned in 0.78 seconds

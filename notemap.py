@@ -44,7 +44,39 @@ def new_info(cur_host, host):
         print('\n')
         stored_hosts[cur_host.ipv4] = host
 
+# Given a host, prints all known information
+def host_info(host_ip):
 
+    # Ensure the host exists
+    if not host_ip in stored_hosts.keys():
+        print("Host does not exist!")
+        return
+
+    # host object
+    host = stored_hosts[host_ip]
+
+    # header
+    print("\nHost details for " + host_ip + "" \
+    "\n-----------------------------------")
+
+    # print scanned ports and services if available
+    print("\nOpen TCP Ports:")
+    for port in host.get_open_ports():
+
+        # Ensure port is tcp
+        if port[1] == 'tcp':
+            service = host.get_service(port[0], port[1])
+            print(" * Port " + str(port[0]) + " - " + service.service + " - " + service.banner.split("product:")[1].split("extrainfo:")[0])
+
+    # print os information if available
+    if host.os_fingerprinted:
+        if "SCAN" in host.os_fingerprint:
+            print("\nOS: No Match")
+
+        else:
+            print("\n" + host.os_fingerprint)
+    else:
+        print("\nOS: N/A")
 
 # Interactive Shell
 class BaelishPrompt(Cmd):
@@ -216,27 +248,11 @@ class BaelishPrompt(Cmd):
         print('\n- udp: scans the top 20 udp ports')
 
 
+    def do_info(self, inp):
 
-
-    def do_load(self, path):
-
-        scan = NmapParser.parse_fromfile(path)
-
-        print(scan.hosts[0].os_fingerprint)
-
-    def do_show(self, inp):
-
-        # init globals
-        global current_host, stored_hosts
-
-        # Test to just print out current ports
-        if current_host:
-            print(stored_hosts[current_host].get_ports())
-
-
-    #def do_diff(self, inp):
-        # Test to try out nmap.diff:
-
+        # Given no input, print out the host info of current host
+        if (not inp) and current_host:
+            host_info(current_host)
 
 
 
