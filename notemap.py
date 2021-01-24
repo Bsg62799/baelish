@@ -10,12 +10,16 @@ from libnmap.parser import NmapParser
 from libnmap.diff import NmapDiff
 import libnmap
 import commands
+import json
 
 # globals
 stored_hosts = dict()
 current_host = ""
 project_path = ""
 project_name = ""
+
+# Notes are stored in the form: {host.ipv4, (port #, 'OS', or host.ipv4, note_content)}
+stored_notes = dict()
 
 # Supporting helper methods
 
@@ -57,10 +61,17 @@ def host_info(host_ip):
 
     # header
     print("\nHost details for " + host_ip + "" \
-    "\n-----------------------------------")
+    "\n===============================================")
+
+    # print general notes on the host if any
+    if host_ip in stored_notes[host_ip].keys():
+        print("\nGeneral Host Notes:\n---------------------------")
+
+        for note in stored_notes[host_ip][host_ip]:
+            print(" * " + note)
 
     # print scanned ports and services if available
-    print("\nOpen TCP Ports:")
+    print("\nOpen TCP Ports:\n------------------------")
     for port in host.get_open_ports():
 
         # Ensure port is tcp
@@ -75,8 +86,10 @@ def host_info(host_ip):
 
         else:
             print("\n" + host.os_fingerprint)
+
+        print('\n')
     else:
-        print("\nOS: N/A")
+        print("\nOS: N/A\n")
 
 # Interactive Shell
 class BaelishPrompt(Cmd):
@@ -86,11 +99,9 @@ class BaelishPrompt(Cmd):
 
         # Set the path for the project
         global project_path, current_host, stored_hosts
-        response = input(cs("\n------------------------------------------\n" + pyfiglet.figlet_format("NoteMap", font="slant") + \
-        "------------------------------------------\n\n" \
+        response = input(cs(pyfiglet.figlet_format("NoteMap", font="slant"), "cyan") + \
         "Welcome to notemap, a tool to aid in handling information for penetration tests" \
-        "\nType ? to list available commands" \
-        "\nTo get started, enter a new or exisiting project path: ", "cyan"))
+        "\nTo get started, enter a new or exisiting project path: ")
 
         # spacing
         print('')
@@ -105,19 +116,31 @@ class BaelishPrompt(Cmd):
             # Iterate through every dir (host) in the project folder
             for dir in os.listdir(response):
 
+                dir_contents = os.listdir(response + '/' + dir)
+
+                # Check to see if notes exist for this host
+                if 'notes.json' in dir_contents:
+                    json_path = response + '/' + dir + '/' + 'notes.json'
+                    with open(json_path) as json_file:
+                        stored_notes[dir] = json.load(json_file)
+
+                else:
+                    stored_notes[dir] = {}
+
                 # If available, load host from an all scan
-                if 'nmap-all.xml' in os.listdir(response + '/' + dir):
+                if 'nmap-all.xml' in dir_contents:
                     info = NmapParser.parse_fromfile(response + '/' + dir + '/' + 'nmap-all.xml')
                     stored_hosts[dir] = info.hosts[0]
 
                 # Otherwise, load host from a default scan
-                elif 'nmap.xml' in os.listdir(response + '/' + dir):
+                elif 'nmap.xml' in dir_contents:
                     info = NmapParser.parse_fromfile(response + '/' + dir + '/' + 'nmap.xml')
                     stored_hosts[dir] = info.hosts[0]
 
                 # Otherwise initailize an empty dict entry
                 else:
                     stored_hosts[dir] = dict()
+
 
 
         # store the project path to provide output paths later
@@ -140,6 +163,10 @@ class BaelishPrompt(Cmd):
 
     # Currently just breaks the commandloop and ends the program
     def do_exit(self, inp):
+
+        for host in stored_hosts.keys():
+            with open(project_path + '/' + host + '/notes.json', "w") as note_file:
+                json.dump(stored_notes[host], note_file)
         return True
 
     def help_exit(self):
@@ -166,6 +193,7 @@ class BaelishPrompt(Cmd):
             if host not in stored_hosts.keys():
                 print("\nHost " + host + " is up, stored as a host!\n")
                 stored_hosts[host] = {}
+                stored_notes[host] = {}
 
                 # if the host is up and unique, create a directory for it
                 global project_path
@@ -253,6 +281,30 @@ class BaelishPrompt(Cmd):
         # Given no input, print out the host info of current host
         if (not inp) and current_host:
             host_info(current_host)
+
+    # Allows the user to leaves notes on scanned ports,
+    # operating systems, or hosts in general
+    def do_note(self, inp):
+
+        # init globals
+        global stored_notes
+
+        args = inp.split(' ')
+
+        # require that users denote the start of the note with 'n'
+        if 'n' not in args:
+            print("\nDenote the start of a note \'n\'\n")
+            return
+
+        # by default, leave a general note on the current host
+        if(args[0] == 'n'):
+            if not current_host in stored_notes[current_host].keys():
+                stored_notes[current_host][current_host] = [(" ".join(args[1:]))]
+            else:
+                stored_notes[current_host][current_host].append(" ".join(args[1:]))
+
+
+
 
 
 
