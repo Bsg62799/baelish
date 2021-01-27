@@ -1,7 +1,8 @@
-# Nmap 7.91 scan initiated Fri Jan 22 17:50:34 2021 as: /usr/bin/nmap -oX - -vvv --stats-every 1s -A --version-all -p- -oN Curling/10.10.10.150/nmap-all.txt -oX Curling/10.10.10.150/nmap-all.xml 10.10.10.150
+# Nmap 7.91 scan initiated Wed Jan 27 00:49:16 2021 as: /usr/bin/nmap -oX - -vvv --stats-every 1s -A --version-all -p- -oN Curling/10.10.10.150/nmap-all.txt -oX Curling/10.10.10.150/nmap-all.xml 10.10.10.150
+Increasing send delay for 10.10.10.150 from 0 to 5 due to 949 out of 3162 dropped probes since last increase.
 Nmap scan report for 10.10.10.150
-Host is up, received echo-reply ttl 63 (0.033s latency).
-Scanned at 2021-01-22 17:50:36 EST for 42s
+Host is up, received echo-reply ttl 63 (0.025s latency).
+Scanned at 2021-01-27 00:49:17 EST for 427s
 Not shown: 65533 closed ports
 Reason: 65533 resets
 PORT   STATE SERVICE REASON         VERSION
@@ -22,28 +23,28 @@ PORT   STATE SERVICE REASON         VERSION
 |_http-title: Home
 No exact OS matches for host (If you know what OS is running on it, see https://nmap.org/submit/ ).
 TCP/IP fingerprint:
-OS:SCAN(V=7.91%E=4%D=1/22%OT=22%CT=1%CU=38436%PV=Y%DS=2%DC=T%G=Y%TM=600B56E
-OS:7%P=x86_64-pc-linux-gnu)SEQ(SP=104%GCD=1%ISR=108%TI=Z%CI=I%II=I%TS=A)OPS
-OS:(O1=M54DST11NW7%O2=M54DST11NW7%O3=M54DNNT11NW7%O4=M54DST11NW7%O5=M54DST1
-OS:1NW7%O6=M54DST11)WIN(W1=7120%W2=7120%W3=7120%W4=7120%W5=7120%W6=7120)ECN
-OS:(R=Y%DF=Y%T=40%W=7210%O=M54DNNSNW7%CC=Y%Q=)T1(R=Y%DF=Y%T=40%S=O%A=S+%F=A
-OS:S%RD=0%Q=)T2(R=N)T3(R=N)T4(R=Y%DF=Y%T=40%W=0%S=A%A=Z%F=R%O=%RD=0%Q=)T5(R
-OS:=Y%DF=Y%T=40%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)T6(R=Y%DF=Y%T=40%W=0%S=A%A=Z%F
-OS:=R%O=%RD=0%Q=)T7(R=Y%DF=Y%T=40%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)U1(R=Y%DF=N%
-OS:T=40%IPL=164%UN=0%RIPL=G%RID=G%RIPCK=G%RUCK=G%RUD=G)IE(R=Y%DFI=N%T=40%CD
-OS:=S)
+OS:SCAN(V=7.91%E=4%D=1/27%OT=22%CT=1%CU=39922%PV=Y%DS=2%DC=T%G=Y%TM=6011008
+OS:8%P=x86_64-pc-linux-gnu)SEQ(SP=FD%GCD=4%ISR=10E%TI=Z%CI=I%II=I%TS=A)OPS(
+OS:O1=M54DST11NW7%O2=M54DST11NW7%O3=M54DNNT11NW7%O4=M54DST11NW7%O5=M54DST11
+OS:NW7%O6=M54DST11)WIN(W1=7120%W2=7120%W3=7120%W4=7120%W5=7120%W6=7120)ECN(
+OS:R=Y%DF=Y%T=40%W=7210%O=M54DNNSNW7%CC=Y%Q=)T1(R=Y%DF=Y%T=40%S=O%A=S+%F=AS
+OS:%RD=0%Q=)T2(R=N)T3(R=N)T4(R=Y%DF=Y%T=40%W=0%S=A%A=Z%F=R%O=%RD=0%Q=)T5(R=
+OS:Y%DF=Y%T=40%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)T6(R=Y%DF=Y%T=40%W=0%S=A%A=Z%F=
+OS:R%O=%RD=0%Q=)T7(R=Y%DF=Y%T=40%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)U1(R=Y%DF=N%T
+OS:=40%IPL=164%UN=0%RIPL=G%RID=G%RIPCK=G%RUCK=G%RUD=G)IE(R=Y%DFI=N%T=40%CD=
+OS:S)
 
-Uptime guess: 37.938 days (since Tue Dec 15 19:20:05 2020)
+Uptime guess: 34.589 days (since Wed Dec 23 10:48:10 2020)
 Network Distance: 2 hops
-TCP Sequence Prediction: Difficulty=259 (Good luck!)
+TCP Sequence Prediction: Difficulty=253 (Good luck!)
 IP ID Sequence Generation: All zeros
 Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 
-TRACEROUTE (using port 5900/tcp)
+TRACEROUTE (using port 8888/tcp)
 HOP RTT      ADDRESS
-1   30.92 ms 10.10.14.1
-2   31.10 ms 10.10.10.150
+1   26.49 ms 10.10.14.1
+2   26.63 ms 10.10.10.150
 
 Read data files from: /usr/bin/../share/nmap
 OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
-# Nmap done at Fri Jan 22 17:51:19 2021 -- 1 IP address (1 host up) scanned in 45.46 seconds
+# Nmap done at Wed Jan 27 00:56:24 2021 -- 1 IP address (1 host up) scanned in 427.59 seconds
