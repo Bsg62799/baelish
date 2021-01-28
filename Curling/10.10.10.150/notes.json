@@ -1,1 +1,1 @@
-{}
+{"10.10.10.150": ["This is a general note for the current host"], "80": ["Thisisanoteonport80ofthecurrenthost"], "os": ["This is a note about the OS of the current host"], "loot": ["This is some sweet piece of loot or credential associated with the host"]}

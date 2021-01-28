@@ -34,6 +34,10 @@ project_name = ""
 # Notes are stored in the form: {host.ipv4, (port #, 'OS', or host.ipv4, note_content)}
 stored_notes = dict()
 
+# Stored tags, where a tag is the association of some given file with a host attribute
+# ex: a tcp port, a host's os, a general note, some piece of loot
+stored_tags = dict()
+
 """Supporting helper methods"""
 
 """
@@ -95,6 +99,12 @@ def host_info(host_ip):
         for note in stored_notes[host_ip][host_ip]:
             print(" * " + note)
 
+    if host_ip in stored_tags[host_ip].keys():
+        print("\nGeneral Host Files:\n" + DIVIDER)
+
+        for file in stored_tags[host_ip][host_ip]:
+            print("  -> " + file)
+
     # print scanned ports and services if available
     print("\nOpen TCP Ports:\n" + DIVIDER)
 
@@ -107,8 +117,16 @@ def host_info(host_ip):
 
         # iterate through any notes associated with the port
         if str(port[0]) in stored_notes[host_ip].keys():
+            print("\n Port " + str(port[0]) + " Notes:\n" + DIVIDER)
             for note in stored_notes[host_ip][str(port[0])]:
                 print("  -> " + note)
+
+        # iterate through any tagged files associated with the port
+        if str(port[0]) in stored_tags[host_ip].keys():
+            print("\n Port " + str(port[0]) + " Files:\n" + DIVIDER)
+
+            for file in stored_tags[host_ip][str(port[0])]:
+                print("  -> " + file)
 
     # print os information if available
     if host.os_fingerprinted:
@@ -128,16 +146,28 @@ def host_info(host_ip):
 
     # regardless of if there is any os information from nmap, print any notes associated with it
     if 'os' in stored_notes[host_ip].keys():
+        print("\nOS Notes:\n" + DIVIDER)
         for note in stored_notes[host_ip]['os']:
             print("  -> " + note)
 
+    # iterate through any tagged files associated with the os
+    if 'os' in stored_tags[host_ip].keys():
+        print("\nOS Files:\n" + DIVIDER)
+
+        for file in stored_tags[host_ip]['os']:
+            print("  -> " + file)
+
     # if there's any loot, print it out
     if 'loot' in stored_notes[host_ip].keys():
-
-        print("\nLoot:\n" + DIVIDER)
+        print("\nLoot Notes:\n" + DIVIDER)
         for note in stored_notes[host_ip]['loot']:
             print("  -> " + note)
 
+    # iterate through any loot files
+    if 'loot' in stored_tags[host_ip].keys():
+        print("\nLoot Files:\n" + DIVIDER)
+        for file in stored_tags[host_ip]['loot']:
+            print("  -> " + file)
     # formating newline
     print()
 
@@ -157,7 +187,8 @@ class NotemapPrompt(Cmd):
         '\nHOST OPTIONS:' \
         '\n -h <host> : Saves the content of the note to the specified host\n' \
         '\nNOTE OPTIONS'
-        '\n -c <type> : Clears the content of the specified type (ex. note -c -p 80 clears notes for port 90 on current host)\n'
+        '\n -c <type>      : Clears the content of the specified type (ex. note -c -p 80 clears notes for port 90 on current host)' \
+        "\n -t <filepath>  : Associates a given file with a specified attribute (port, os, loot) given a <filepath>\n"\
         '\nNOTE TYPES'
         '\n -p <port> : Saves the content of the note to the port (port#) attribute if it exists for the set host' \
         '\n -o        : Saves the content of the note to the OS attribute of the host' \
@@ -247,6 +278,16 @@ class NotemapPrompt(Cmd):
                 else:
                     stored_notes[dir] = dict()
 
+                # Check to see if a tags exist for this host
+                if 'tags.json' in dir_contents:
+                    json_path = response + '/' + dir + '/' + 'tags.json'
+                    with open(json_path) as json_file:
+                        stored_tags[dir] = json.load(json_file)
+
+                # Otherwise init an empty dict
+                else:
+                    stored_tags[dir] = dict()
+
                 # If available, load host from an all scan
                 if 'nmap-all.xml' in dir_contents:
                     info = NmapParser.parse_fromfile(response + '/' + dir + '/' + 'nmap-all.xml')
@@ -286,6 +327,7 @@ class NotemapPrompt(Cmd):
 
         os.system(inp)
 
+
     """
     Saves any notes to a json file and exits the cmdloop.
     """
@@ -295,6 +337,8 @@ class NotemapPrompt(Cmd):
         for host in stored_hosts.keys():
             with open(project_path + '/' + host + '/notes.json', "w") as note_file:
                 json.dump(stored_notes[host], note_file)
+            with open(project_path + '/' + host + '/tags.json', "w") as tag_file:
+                json.dump(stored_tags[host], tag_file)
 
         # break the loop
         return True
@@ -418,6 +462,7 @@ class NotemapPrompt(Cmd):
         host = current_host
         max_index = 0
         clear = False
+        tagging = False
         args = inp.split(' ')
 
         # set the host of this note if given -h
@@ -439,6 +484,12 @@ class NotemapPrompt(Cmd):
 
         # check if we're clearing notes
         clear = '-c' in args
+
+        # check if we're leaving a note or tagging a file
+        tagging = '-t' in args
+
+        if tagging and max_index < args.index('-t'):
+            max_index = args.index('-t')
 
         # if the only given command is -c, clear general notes
         if clear and len(args) == 1:
@@ -468,22 +519,34 @@ class NotemapPrompt(Cmd):
                 print(port + " is not an open port for host " + host + "!")
                 return
 
+
+            # keep track of max index for the sake of getting note content
+            if index > max_index:
+                max_index = index
+
+            # if we're tagging, make sure the note-content is a valid filepath
+            if tagging:
+                if os.path.isfile("".join(args[max_index + 1:])):
+
+                    if not str(port) in stored_tags[host].keys():
+                        stored_tags[host][str(port)] = [("".join(args[max_index + 1:]))]
+                    else:
+                        stored_tags[host][str(port)].append("".join(args[max_index + 1:]))
+
+                    return
+
             # if we're clearing, make sure the notes exist and then delete them
             if clear:
                 if str(port) in stored_notes[current_host].keys():
                     del stored_notes[host][str(port)]
                     return
 
-            # keep track of max index for the sake of getting note content
-            if index > max_index:
-                max_index = index
 
             # if no notes exist for the specified port, init a list of notes. Otherwise append
             if not str(port) in stored_notes[host].keys():
-                print((" ".join(args[max_index + 1:])))
-                stored_notes[host][str(port)] = [(" ".join(args[max_index + 1:]))]
+                stored_notes[host][str(port)] = [("".join(args[max_index + 1:]))]
             else:
-                stored_notes[host][str(port)].append(" ".join(args[max_index + 1:]))
+                stored_notes[host][str(port)].append("".join(args[max_index + 1:]))
 
         # if given -o associate the note with the os of the host
         elif '-o' in args and not '-p' in args and not '-l' in args:
@@ -500,6 +563,17 @@ class NotemapPrompt(Cmd):
             # keep track of the max index for the sake of getting note content
             if index > max_index:
                 max_index = index
+
+            # if we're tagging, make sure the note-content is a valid filepath
+            if tagging:
+                if os.path.isfile("".join(args[max_index + 1:])):
+
+                    if not 'os' in stored_tags[host].keys():
+                        stored_tags[host]['os'] = [("".join(args[max_index + 1:]))]
+                    else:
+                        stored_tags[host]['os'].append("".join(args[max_index + 1:]))
+
+                    return
 
             # if no notes exist for the host's os, init a list of notes. Otherwise append
             if not 'os' in stored_notes[host].keys():
@@ -522,6 +596,17 @@ class NotemapPrompt(Cmd):
             # keep track of max index for the sake of getting note content
             if index > max_index:
                 max_index = index
+
+            # if we're tagging, make sure the note-content is a valid filepath
+            if tagging:
+                if os.path.isfile("".join(args[max_index + 1:])):
+
+                    if not 'loot' in stored_tags[host].keys():
+                        stored_tags[host]['loot'] = [("".join(args[max_index + 1:]))]
+                    else:
+                        stored_tags[host]['loot'].append("".join(args[max_index + 1:]))
+
+                    return
 
             # if no notes exist for the host's os, init a list of notes. Otherwise append
             if not 'loot' in stored_notes[host].keys():
